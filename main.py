@@ -1,9 +1,19 @@
 import pandas as pd
+from tkinter import Tk, filedialog
 
+def escolher_planilha(titulo):
+    root= Tk()
+    root.withdraw() 
+    caminho=filedialog.askopenfilename(
+        title=titulo,
+        filetypes=[("Arquivos Excel", "*.xlsx *.xls")]
+    )
+    if not caminho:
+        raise Exception("Nenhum arquivo selecionado")
+    return caminho
 #associa as planilhas a "variaveis" internas
-planilha1 = pd.read_excel('C:/Users/davi.ramalho/Desktop/Estudos python/Teste planilha.xlsx')
-planilha2 = pd.read_excel('C:/Users/davi.ramalho/Desktop/Estudos python/Teste so linhas.xlsx')
-
+planilha1 = escolher_planilha("Selecione a PRIMEIRA planilha (dados principais)")
+planilha2 = escolher_planilha("Selecione a SEGUNDA planilha (linhas)")
 #faz a junção das 2 planilhas, sendo que utiliza a coluna ID para tal, criando uma variavel temporaria
 planilhaTemp = pd.merge(planilha1, planilha2, on='ID')
 
