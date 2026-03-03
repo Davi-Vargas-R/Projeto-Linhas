@@ -1,6 +1,8 @@
 import pandas as pd
 from tkinter import Tk, filedialog
+from openpyxl import load_workbook
 
+#Função para deixar o usuário escolher as planilhas
 def escolher_planilha(titulo):
     root= Tk()
     root.withdraw() 
@@ -11,11 +13,31 @@ def escolher_planilha(titulo):
     if not caminho:
         raise Exception("Nenhum arquivo selecionado")
     return caminho
+
+def escolher_onde_salvar(titulo, nome):
+    root= tk()
+    root.withdraw
+    caminho = filedialog.asksaveasfilename(
+        title=titulo,
+        defaultextension=".xlsx",
+        initialfile="nome",
+        filetypes=[("Arquivos Excel",'*.xlsx')]
+    )
+    if not caminho:
+        raise Exception("Local para salvar não selecionado")
+    return caminho
+
+#Função criada para fins de organização(manda a coluna 'Valor' para ser a ultima )
+def mover_para_final(df, coluna):
+    cols = [c for c in df.columns if c != coluna] + [coluna]
+    return df[cols]
+
 #associa as planilhas a "variaveis" internas
 planilha1 = escolher_planilha("Selecione a PRIMEIRA planilha (dados principais)")
 planilha2 = escolher_planilha("Selecione a SEGUNDA planilha (linhas)")
+
 #faz a junção das 2 planilhas, sendo que utiliza a coluna ID para tal, criando uma variavel temporaria
-planilhaTemp = pd.merge(planilha1, planilha2, on='ID')
+planilhaTemp = pd.merge(planilha1, planilha2, on='MSISDN')
 
 #Define user como a coluna Usuario, assim puxando todos os valores dessa coluna
 user=planilhaTemp['Usuario']
@@ -40,11 +62,6 @@ linhas_livres= planilhaTemp[filtro_livre]
 #criação da planilha planilhaFinal no sistema utilizando o filtro ocupado criado anteriormente 
 planilhaFinal=planilhaTemp[filtro_ocupado]
 
-#Função criada para fins de organização(manda a coluna 'Valor' para ser a ultima )
-def mover_para_final(df, coluna):
-    cols = [c for c in df.columns if c != coluna] + [coluna]
-    return df[cols]
-
 planilhaFinal = mover_para_final(planilhaFinal, 'Valor')
 linhas_livres = mover_para_final(linhas_livres, 'Valor')
 
@@ -62,11 +79,33 @@ valor_setor=pd.DataFrame({
 #Print no sistema para motivos de teste rápido
 print(planilhaFinal)
 
-
-#criação da planilha definitiva contendo os valores pagos mensalmente
-with pd.ExcelWriter('C:/Users/davi.ramalho/Desktop/Estudos python/planilha_com_abas.xlsx') as writer:
+caminho_excel=escolher_onde_salvar(
+    "Salvar relatório",
+    "relatório_final.xlsx"
+)
+base= caminho_excel.rsplit('.', 1)[0]
+with pd.ExcelWriter(base+".xlsx") as writer:
     planilhaFinal.to_excel(writer, sheet_name='Usuários Válidos', index=False)
-    valor_setor.to_excel(writer, sheet_name='Valor-Setor',index=False)
-#criação das planilhas de saída nos arquivos do computador, pronto para serem abertas.
-planilhaFinal.to_excel('C:/Users/davi.ramalho/Desktop/Estudos python/planilha_final.xlsx', index=False)
-linhas_livres.to_excel('C:/Users/davi.ramalho/Desktop/Estudos python/linhas_livres.xlsx', index=False)
+    valor_setor.to_excel(writer, sheet_name='Valor-Setor', index=False)
+
+wb= load_workbook(base+".xlsx")
+ws= wb['Usuários Válidos']
+
+for cell in ws[1]:
+    cell.font = cell.font.copy(bold=True)
+
+wb.save(vase+'.xlsx')
+
+planilhaFinal.to_csv(
+    base+".csv",
+    index=False,
+    sep=";",
+    encoding='utf-8-sig'
+)
+linhas_livres.to_csv(
+    base+".csv",
+    index=False,
+    sep=";",
+    encoding='utf-8-sig'
+)
+
