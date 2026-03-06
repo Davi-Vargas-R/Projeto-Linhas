@@ -1,13 +1,13 @@
-import pandas as pd
+iimport pandas as pd
 from tkinter import Tk, filedialog
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Font
 
-#Função para deixar o usuário escolher as planilhas
+
 def escolher_planilha(titulo):
-    root= Tk()
-    root.withdraw() 
-    caminho=filedialog.askopenfilename(
+    root = Tk()
+    root.withdraw()
+    caminho = filedialog.askopenfilename(
         title=titulo,
         filetypes=[("Arquivos Excel", "*.xlsx *.xls")]
     )
@@ -15,162 +15,170 @@ def escolher_planilha(titulo):
         raise Exception("Nenhum arquivo selecionado")
     return caminho
 
+
 def escolher_onde_salvar(titulo, nome):
-    root= Tk()
+    root = Tk()
     root.withdraw()
     caminho = filedialog.asksaveasfilename(
         title=titulo,
         defaultextension=".xlsx",
-        initialfile="nome",
-        filetypes=[("Arquivos Excel",'*.xlsx')]
+        initialfile=nome,
+        filetypes=[("Arquivos Excel", "*.xlsx")]
     )
     if not caminho:
         raise Exception("Local para salvar não selecionado")
     return caminho
 
-#Função criada para fins de organização(manda a coluna 'Valor' para ser a ultima )
+
 def mover_para_final(df, coluna):
     cols = [c for c in df.columns if c != coluna] + [coluna]
     return df[cols]
 
-#Usuário escolhe as planilhas que serão utilizadas
+
+def normalizar_msisdn(col):
+    return (
+        col.astype(str)
+        .str.replace(r'^55', '', regex=True)
+        .str.strip()
+    )
+
+
+# Escolha das planilhas
 caminho_planilha1 = escolher_planilha("Selecione a PRIMEIRA planilha (dados principais)")
 caminho_planilha2 = escolher_planilha("Selecione a SEGUNDA planilha (linhas)")
 
-#associa as planilhas a "variaveis" internas
+# Leitura das planilhas
 planilha1 = pd.read_excel(caminho_planilha1)
-planilha2 = pd.read_excel(caminho_planilha2, sheet_name="Lista com Valores")
+planilha2 = pd.read_excel(
+    caminho_planilha2,
+    sheet_name="Lista com Valores",
+    dtype={'MSISDN': str}
+)
+
 planilha2 = planilha2[['MSISDN', 'Status', 'Total Linha']]
 
-#Altera o nome de 2 colunas para fins de normalização
+# Renomear colunas
 planilha2 = planilha2.rename(columns={
     'Total Linha': 'Valor'
 })
+
 planilha1 = planilha1.rename(columns={
     'Setor_CNPJ': 'Setor'
 })
 
-#Transforma as colunas em minuscula para fins de normalização de dados
+# Normalizar nomes de colunas
 planilha1.columns = planilha1.columns.str.strip().str.lower()
 planilha2.columns = planilha2.columns.str.strip().str.lower()
 
-#Transforma as colunas msisdn em str para não dar conflito
-planilha1['msisdn'] = planilha1['msisdn'].astype(str)
-planilha2['msisdn'] = planilha2['msisdn'].astype(str)
+# Normalizar msisdn
+planilha1['msisdn'] = normalizar_msisdn(planilha1['msisdn'])
+planilha2['msisdn'] = normalizar_msisdn(planilha2['msisdn'])
 
-#Retira o "55" presente em alguns numeros
-planilha1['msisdn'] = planilha1['msisdn'].str.replace(r'^55', '', regex=True)
-planilha2['msisdn'] = planilha2['msisdn'].str.replace(r'^55', '', regex=True)
-
-planilha2['valor'] = (
+# Normalizar valores monetários
+planilha2['valor'] = pd.to_numeric(
     planilha2['valor']
     .astype(str)
-    .str.replace('.', '', regex=False)   # remove separador de milhar
-    .str.replace(',', '.', regex=False)  # troca vírgula por ponto
+    .str.replace('.', '', regex=False)
+    .str.replace(',', '.', regex=False),
+    errors='coerce'
 )
 
-#Transforma os valores da coluna "valor" de str para int
-planilha2['valor'] = pd.to_numeric(planilha2['valor'], errors='coerce')
-#faz a junção das 2 planilhas, sendo que utiliza a coluna ID para tal, criando uma variavel temporaria
+# Merge das planilhas
 planilhaTemp = pd.merge(planilha1, planilha2, on='msisdn', how='left')
 
-#Define user como a coluna Usuario que será utilizada para puxar todos os valores dessa coluna
-user=planilhaTemp['usuario']
-status=planilhaTemp['status_atual']
-linha=planilhaTemp['msisdn']
+# Colunas auxiliares
+user = planilhaTemp['usuario']
+status = planilhaTemp['status_atual']
+linha = planilhaTemp['msisdn']
 
-msisdn_vazio= linha.isna()| (linha.astype(str).str.strip()=='')
-#Filtro para caso uma linha não possua dono, ou seja, está livre
-filtro_livre=(
-    user.isna()|
+msisdn_vazio = linha.isna() | (linha.astype(str).str.strip() == '')
+
+# Filtros
+filtro_livre = (
+    user.isna() |
     status.astype(str).str.strip().str.lower().isin(['demitido'])
 )
 
-#Filtro para caso uma linha possua dono, ou seja, está ocupado
-filtro_ocupado=(
-    (
-    user.notna()&
-    ~user.astype(str).str.strip().str.lower().isin(['','não encontrado'])&
+filtro_ocupado = (
+    user.notna() &
+    ~user.astype(str).str.strip().str.lower().isin(['', 'não encontrado']) &
     ~status.astype(str).str.strip().str.lower().isin(['demitido'])
-    |msisdn_vazio
-    )
-)
+) | msisdn_vazio
 
-
-#criação da planilha de linhas livres no sistema utilizando o filtro livre criado anteriormente 
-linhas_livres= planilhaTemp[filtro_livre]
-
-#criação da planilha planilhaFinal no sistema utilizando o filtro ocupado criado anteriormente 
-planilhaFinal=planilhaTemp[filtro_ocupado]
+# Planilhas resultantes
+linhas_livres = planilhaTemp[filtro_livre]
+planilhaFinal = planilhaTemp[filtro_ocupado]
 
 planilhaFinal = mover_para_final(planilhaFinal, 'valor')
 linhas_livres = mover_para_final(linhas_livres, 'valor')
 
-#agrupamento dos valores baseado nos setores(quanto cada setor gasta com as linhas)
-valor_total=planilhaTemp.groupby('setor')['valor'].sum()
-valor_livre=linhas_livres.groupby('setor')['valor'].sum()
-valor_ocupado=planilhaFinal.groupby('setor')['valor'].sum()
+# Agrupamentos por setor
+valor_total = planilhaTemp.groupby('setor', dropna=False)['valor'].sum()
+valor_livre = linhas_livres.groupby('setor', dropna=False)['valor'].sum()
+valor_ocupado = planilhaFinal.groupby('setor', dropna=False)['valor'].sum()
 
-#criação das colunas presentes na segunda aba da planilha final
-valor_setor=pd.DataFrame({
+# Tabela resumo
+valor_setor = pd.DataFrame({
     'setor': valor_total.index,
     'valor linhas livres': valor_livre.reindex(valor_total.index, fill_value=0).values,
     'valor linhas ocupadas': valor_ocupado.reindex(valor_total.index, fill_value=0).values,
     'valor total': valor_total.values,
-    })
-#Print no sistema para motivos de teste rápido
+})
+
 print(planilhaFinal)
 
-#chama a função de salvar dados e envia os parametros
-caminho_excel=escolher_onde_salvar(
+# Salvar arquivo
+caminho_excel = escolher_onde_salvar(
     "Salvar relatório",
-    "relatório_final.xlsx"
+    "relatorio_final.xlsx"
 )
-#cria a planilha final com as 2 abas
-base= caminho_excel.rsplit('.', 1)[0]
-with pd.ExcelWriter(base+".xlsx") as writer:
+
+base = caminho_excel.rsplit('.', 1)[0]
+
+with pd.ExcelWriter(base + ".xlsx") as writer:
     planilhaFinal.to_excel(writer, sheet_name='Usuários Válidos', index=False)
     valor_setor.to_excel(writer, sheet_name='Valor-Setor', index=False)
 
-wb= load_workbook(base+".xlsx")
-ws= wb['Usuários Válidos']
+# Estilização Excel
+wb = load_workbook(base + ".xlsx")
+ws = wb['Usuários Válidos']
 
-#Estilo cabeçalho
-ws.freeze_panes ="A2" #congela cabeçalho
-header_fill= PatternFill(start_color="33FF33", end_color="33FF33", fill_type="solid")
+ws.freeze_panes = "A2"
+
+header_fill = PatternFill(start_color="33FF33", end_color="33FF33", fill_type="solid")
 
 for cell in ws[1]:
-    cell.font= Font(bold=True, color="FFFFFF")
-    cell.fill= header_fill
+    cell.font = Font(bold=True, color="FFFFFF")
+    cell.fill = header_fill
 
-#Ajusta a largura das colunas
+# Ajustar largura das colunas
 for col in ws.columns:
-    max_length= 0
-    col_letter= col[0].column_letter
+    max_length = 0
+    col_letter = col[0].column_letter
 
     for cell in col:
         try:
             if cell.value:
-                max_length=max(max_length, len(str(cell.value)))
+                max_length = max(max_length, len(str(cell.value)))
         except:
             pass
-    ws.column_dimensions[col_letter].width= max_length+2
+
+    ws.column_dimensions[col_letter].width = max_length + 2
 
 ws.auto_filter.ref = ws.dimensions
 
-wb.save(base+'.xlsx')
+wb.save(base + '.xlsx')
 
-#cria o arquivo .csv da planilha final
+# Exportar CSV
 planilhaFinal.to_csv(
-    base+".csv",
+    base + ".csv",
     index=False,
     sep=";",
     encoding='utf-8-sig'
 )
 
-#cria o arquivo .csv da planilha linhas livres
 linhas_livres.to_csv(
-    base+"linhas_livres.csv",
+    base + "_linhas_livres.csv",
     index=False,
     sep=";",
     encoding='utf-8-sig'
