@@ -1,10 +1,7 @@
 import pandas as pd
 from tkinter import Tk, filedialog
 from openpyxl import load_workbook
-<<<<<<< HEAD
 from openpyxl.styles import PatternFill, Font
-=======
->>>>>>> 607a944b5ab49e1f952617f2a7bd4350b9d13ecb
 
 #Função para deixar o usuário escolher as planilhas
 def escolher_planilha(titulo):
@@ -17,34 +14,6 @@ def escolher_planilha(titulo):
     if not caminho:
         raise Exception("Nenhum arquivo selecionado")
     return caminho
-<<<<<<< HEAD
-=======
-
-def escolher_onde_salvar(titulo, nome):
-    root= tk()
-    root.withdraw
-    caminho = filedialog.asksaveasfilename(
-        title=titulo,
-        defaultextension=".xlsx",
-        initialfile="nome",
-        filetypes=[("Arquivos Excel",'*.xlsx')]
-    )
-    if not caminho:
-        raise Exception("Local para salvar não selecionado")
-    return caminho
-
-#Função criada para fins de organização(manda a coluna 'Valor' para ser a ultima )
-def mover_para_final(df, coluna):
-    cols = [c for c in df.columns if c != coluna] + [coluna]
-    return df[cols]
-
-#associa as planilhas a "variaveis" internas
-planilha1 = escolher_planilha("Selecione a PRIMEIRA planilha (dados principais)")
-planilha2 = escolher_planilha("Selecione a SEGUNDA planilha (linhas)")
-
-#faz a junção das 2 planilhas, sendo que utiliza a coluna ID para tal, criando uma variavel temporaria
-planilhaTemp = pd.merge(planilha1, planilha2, on='MSISDN')
->>>>>>> 607a944b5ab49e1f952617f2a7bd4350b9d13ecb
 
 def escolher_onde_salvar(titulo, nome):
     root= Tk()
@@ -134,13 +103,8 @@ linhas_livres= planilhaTemp[filtro_livre]
 #criação da planilha planilhaFinal no sistema utilizando o filtro ocupado criado anteriormente 
 planilhaFinal=planilhaTemp[filtro_ocupado]
 
-<<<<<<< HEAD
 planilhaFinal = mover_para_final(planilhaFinal, 'valor')
 linhas_livres = mover_para_final(linhas_livres, 'valor')
-=======
-planilhaFinal = mover_para_final(planilhaFinal, 'Valor')
-linhas_livres = mover_para_final(linhas_livres, 'Valor')
->>>>>>> 607a944b5ab49e1f952617f2a7bd4350b9d13ecb
 
 #agrupamento dos valores baseado nos setores(quanto cada setor gasta com as linhas)
 valor_total=planilhaTemp.groupby('setor')['valor'].sum()
@@ -157,18 +121,12 @@ valor_setor=pd.DataFrame({
 #Print no sistema para motivos de teste rápido
 print(planilhaFinal)
 
-<<<<<<< HEAD
 #chama a função de salvar dados e envia os parametros
-=======
->>>>>>> 607a944b5ab49e1f952617f2a7bd4350b9d13ecb
 caminho_excel=escolher_onde_salvar(
     "Salvar relatório",
     "relatório_final.xlsx"
 )
-<<<<<<< HEAD
 #cria a planilha final com as 2 abas
-=======
->>>>>>> 607a944b5ab49e1f952617f2a7bd4350b9d13ecb
 base= caminho_excel.rsplit('.', 1)[0]
 with pd.ExcelWriter(base+".xlsx") as writer:
     planilhaFinal.to_excel(writer, sheet_name='Usuários Válidos', index=False)
@@ -177,7 +135,6 @@ with pd.ExcelWriter(base+".xlsx") as writer:
 wb= load_workbook(base+".xlsx")
 ws= wb['Usuários Válidos']
 
-<<<<<<< HEAD
 #Estilo cabeçalho
 ws.freeze_panes ="A2" #congela cabeçalho
 header_fill= PatternFill(start_color="33FF33", end_color="33FF33", fill_type="solid")
@@ -204,33 +161,17 @@ ws.auto_filter.ref = ws.dimensions
 wb.save(base+'.xlsx')
 
 #cria o arquivo .csv da planilha final
-=======
-for cell in ws[1]:
-    cell.font = cell.font.copy(bold=True)
-
-wb.save(vase+'.xlsx')
-
->>>>>>> 607a944b5ab49e1f952617f2a7bd4350b9d13ecb
 planilhaFinal.to_csv(
     base+".csv",
     index=False,
     sep=";",
     encoding='utf-8-sig'
 )
-<<<<<<< HEAD
 
 #cria o arquivo .csv da planilha linhas livres
 linhas_livres.to_csv(
     base+"linhas_livres.csv",
-=======
-linhas_livres.to_csv(
-    base+".csv",
->>>>>>> 607a944b5ab49e1f952617f2a7bd4350b9d13ecb
     index=False,
     sep=";",
     encoding='utf-8-sig'
 )
-<<<<<<< HEAD
-=======
-
->>>>>>> 607a944b5ab49e1f952617f2a7bd4350b9d13ecb
