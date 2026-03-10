@@ -1,4 +1,4 @@
-iimport pandas as pd
+import pandas as pd
 from tkinter import Tk, filedialog
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Font
@@ -44,8 +44,8 @@ def normalizar_msisdn(col):
 
 
 # Escolha das planilhas
-caminho_planilha1 = escolher_planilha("Selecione a PRIMEIRA planilha (dados principais)")
-caminho_planilha2 = escolher_planilha("Selecione a SEGUNDA planilha (linhas)")
+caminho_planilha1 = escolher_planilha("Selecione a planilha Funcionários-Linhas(Dados)")
+caminho_planilha2 = escolher_planilha("Selecione a planilha Base de dados Embratel(Linhas)")
 
 # Leitura das planilhas
 planilha1 = pd.read_excel(caminho_planilha1)
@@ -59,7 +59,8 @@ planilha2 = planilha2[['MSISDN', 'Status', 'Total Linha']]
 
 # Renomear colunas
 planilha2 = planilha2.rename(columns={
-    'Total Linha': 'Valor'
+    'Total Linha': 'Valor',
+    'Status': 'Status-Linha'
 })
 
 planilha1 = planilha1.rename(columns={
@@ -102,8 +103,10 @@ filtro_livre = (
 filtro_ocupado = (
     user.notna() &
     ~user.astype(str).str.strip().str.lower().isin(['', 'não encontrado']) &
-    ~status.astype(str).str.strip().str.lower().isin(['demitido'])
-) | msisdn_vazio
+    ~status.astype(str).str.strip().str.lower().isin(['demitido']) &
+    ~msisdn_vazio
+
+) 
 
 # Planilhas resultantes
 linhas_livres = planilhaTemp[filtro_livre]
@@ -141,31 +144,31 @@ with pd.ExcelWriter(base + ".xlsx") as writer:
 
 # Estilização Excel
 wb = load_workbook(base + ".xlsx")
-ws = wb['Usuários Válidos']
 
-ws.freeze_panes = "A2"
+header_fill = PatternFill(start_color="006633", end_color="006633", fill_type="solid")
 
-header_fill = PatternFill(start_color="33FF33", end_color="33FF33", fill_type="solid")
+for ws in wb.worksheets:
+    ws.freeze_panes = "A2"
 
-for cell in ws[1]:
-    cell.font = Font(bold=True, color="FFFFFF")
-    cell.fill = header_fill
+    for cell in ws[1]:
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = header_fill
 
-# Ajustar largura das colunas
-for col in ws.columns:
-    max_length = 0
-    col_letter = col[0].column_letter
+    # Ajustar largura das colunas
+    for col in ws.columns:
+        max_length = 0
+        col_letter = col[0].column_letter
 
-    for cell in col:
-        try:
-            if cell.value:
-                max_length = max(max_length, len(str(cell.value)))
-        except:
-            pass
+        for cell in col:
+            try:
+                if cell.value:
+                    max_length = max(max_length, len(str(cell.value)))
+            except:
+                pass
 
-    ws.column_dimensions[col_letter].width = max_length + 2
+        ws.column_dimensions[col_letter].width = max_length + 2
 
-ws.auto_filter.ref = ws.dimensions
+    ws.auto_filter.ref = ws.dimensions
 
 wb.save(base + '.xlsx')
 
