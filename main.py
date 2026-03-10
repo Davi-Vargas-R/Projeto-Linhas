@@ -1,9 +1,10 @@
 import pandas as pd
 from tkinter import Tk, filedialog
 from openpyxl import load_workbook
-from openpyxl.styles import PatternFill, Font
+from openpyxl.styles import PatternFill, Font, Border, Side, Alignment
 
 
+#Função para usuário escolher as planilhas salvas nos arquivos do próprio computador
 def escolher_planilha(titulo):
     root = Tk()
     root.withdraw()
@@ -16,6 +17,7 @@ def escolher_planilha(titulo):
     return caminho
 
 
+#Função para usuário escolher onde as planilhas serão salvas
 def escolher_onde_salvar(titulo, nome):
     root = Tk()
     root.withdraw()
@@ -29,12 +31,13 @@ def escolher_onde_salvar(titulo, nome):
         raise Exception("Local para salvar não selecionado")
     return caminho
 
-
+#Função para fins de organização da planilha(manda a coluna selecionada para ser a última)
 def mover_para_final(df, coluna):
     cols = [c for c in df.columns if c != coluna] + [coluna]
     return df[cols]
 
 
+#Função para normalizar o msisdn(retira o 55 caso possua)
 def normalizar_msisdn(col):
     return (
         col.astype(str)
@@ -55,6 +58,7 @@ planilha2 = pd.read_excel(
     dtype={'MSISDN': str}
 )
 
+#Defina quais colunas terão na planilha2
 planilha2 = planilha2[['MSISDN', 'Status', 'Total Linha']]
 
 # Renomear colunas
@@ -62,6 +66,7 @@ planilha2 = planilha2.rename(columns={
     'Total Linha': 'Valor',
     'Status': 'Status-Linha'
 })
+
 
 planilha1 = planilha1.rename(columns={
     'Setor_CNPJ': 'Setor'
@@ -146,14 +151,37 @@ with pd.ExcelWriter(base + ".xlsx") as writer:
 wb = load_workbook(base + ".xlsx")
 
 header_fill = PatternFill(start_color="006633", end_color="006633", fill_type="solid")
+linha_fill = PatternFill(start_color="E8F5E9", end_color="E8F5E9", fill_type="solid")
+
+#Borda
+borda = Border(
+    left=Side(style='thin'),
+    right=Side(style='thin'),
+    top=Side(style='thin'),
+    bottom=Side(style='thin')
+)
 
 for ws in wb.worksheets:
-    ws.freeze_panes = "A2"
 
+    ws.freeze_panes = "A2"
+    
+    #Cabeçalho
     for cell in ws[1]:
         cell.font = Font(bold=True, color="FFFFFF")
         cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = borda
 
+    #Linhas zebra + bordas
+    for row in ws.iter_rows(min_row=2):
+        if row[0].row % 2==0:
+            for cell in row:
+                cell.fill = linha_fill
+
+        for cell in row:
+            cell.border = borda
+            cell.alignment = Alignment(vertical="center")
+            
     # Ajustar largura das colunas
     for col in ws.columns:
         max_length = 0
