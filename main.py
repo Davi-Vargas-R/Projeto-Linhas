@@ -5,6 +5,17 @@ from openpyxl.styles import PatternFill, Font, Border, Side, Alignment
 from interface import escolher_planilha, escolher_onde_salvar
 from processamento import mover_para_final, normalizar_msisdn 
 from relatorio_excel import gerar_relatorio_excel
+from database import criar_tabela, salvar_dataframe
+from datetime import datetime
+import logging
+
+logging.basicConfig(
+    filename="execucao.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
+logging.info("Script iniciado")
 
 # Escolha das planilhas
 caminho_planilha1 = escolher_planilha("Selecione a planilha Funcionários-Linhas(Dados)")
@@ -24,7 +35,7 @@ planilha2 = planilha2[['MSISDN', 'Status', 'Total Linha']]
 # Renomear colunas
 planilha2 = planilha2.rename(columns={
     'Total Linha': 'Valor',
-    'Status': 'Status-Linha'
+    'Status': 'Status_Linha'
 })
 
 
@@ -52,6 +63,7 @@ planilha2['valor'] = pd.to_numeric(
 # Merge das planilhas
 planilhaTemp = pd.merge(planilha1, planilha2, on='msisdn', how='left')
 
+print(planilhaTemp["msisdn"].value_counts().head(20))
 # Colunas auxiliares
 user = planilhaTemp['usuario']
 status = planilhaTemp['status_atual']
@@ -94,6 +106,10 @@ valor_setor = pd.DataFrame({
 })
 
 print(planilhaFinal)
+
+planilhaFinal["data_execucao"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+criar_tabela()
+salvar_dataframe(planilhaFinal)
 
 # Salvar arquivo
 caminho_excel = escolher_onde_salvar(

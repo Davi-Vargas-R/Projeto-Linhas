@@ -26,4 +26,4 @@ def escolher_onde_salvar(titulo, nome):
     if not caminho:
         raise Exception("Local para salvar não selecionado")
     return caminho
-print("AAAAAAAAAAAAAAAAAAAAAA")
+

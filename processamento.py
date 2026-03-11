@@ -13,4 +13,3 @@ def normalizar_msisdn(col):
         .str.replace(r'^55', '', regex=True)
         .str.strip()
     )
-print("AAAAAAAAAAAAAAAAAAAAAAAAA")
