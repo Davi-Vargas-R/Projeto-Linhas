@@ -5,7 +5,7 @@ from openpyxl.styles import PatternFill, Font, Border, Side, Alignment
 from interface import escolher_planilha, escolher_onde_salvar
 from processamento import mover_para_final, normalizar_msisdn 
 from relatorio_excel import gerar_relatorio_excel
-from database import criar_tabela, salvar_dataframe
+from database import criar_tabelas, inserir_linha, inserir_usuario, carregar_relacoes, comparar_dados, sincronizar_banco, obter_ou_criar_linha, obter_ou_criar_usuario
 from datetime import datetime
 import logging
 
@@ -63,7 +63,6 @@ planilha2['valor'] = pd.to_numeric(
 # Merge das planilhas
 planilhaTemp = pd.merge(planilha1, planilha2, on='msisdn', how='left')
 
-print(planilhaTemp["msisdn"].value_counts().head(20))
 # Colunas auxiliares
 user = planilhaTemp['usuario']
 status = planilhaTemp['status_atual']
@@ -107,10 +106,6 @@ valor_setor = pd.DataFrame({
 
 print(planilhaFinal)
 
-planilhaFinal["data_execucao"] = datetime.now().strftime("%Y-%m-%d %H:%M")
-criar_tabela()
-salvar_dataframe(planilhaFinal)
-
 # Salvar arquivo
 caminho_excel = escolher_onde_salvar(
     "Salvar relatório",
@@ -118,6 +113,78 @@ caminho_excel = escolher_onde_salvar(
 )
 
 base = caminho_excel.rsplit('.', 1)[0]
+
+#aaaaaaaaaa
+
+#Associando variavel para ter os valores da planilha final
+planilhaDb=planilhaFinal.copy()
+
+#Filtro de dados(se está vazio ou com espaços)
+planilhaDb = planilhaDb[
+    planilhaDb["msisdn"].notna() &
+    planilhaDb["msisdn"].astype(str).str.strip().ne("") &
+    planilhaDb["usuario"].notna() &
+    planilhaDb["usuario"].astype(str).str.strip().ne("")
+]
+
+#Executar só diretamente
+if __name__ == "__main__": 
+    criar_tabelas() 
+    ids_usuario = []
+    ids_linha = []
+
+    #Para indendependentes colunas na planilhaDb
+    for _, row in planilhaDb.iterrows():
+
+        #Confere se já possui aquele dado no banco, caso não, cria no banco e retorna o id recém criado 
+        id_usuario = obter_ou_criar_usuario(row["usuario"])
+        id_linha = obter_ou_criar_linha(row["msisdn"])
+
+        #salva em 2 lista parelela
+        ids_usuario.append(id_usuario)
+        ids_linha.append(id_linha)
+
+    #cria essas colunas na planilhaDb
+    planilhaDb["id_usuario"] = ids_usuario
+    planilhaDb["id_linha"] = ids_linha
+
+    #remove duplicatas
+    planilhaDb = planilhaDb.drop_duplicates(
+        subset=["id_usuario", "id_linha"]
+    )    
+    
+    #Cria novo Df selecionando só as colunas necessárias
+    df_novo = planilhaDb[[ 
+        "id_usuario", 
+        "id_linha", 
+        "valor", 
+        "status_linha", 
+        "usuario", 
+        "msisdn" 
+        ]].rename(columns={
+            "valor": "valor_linha"
+            }) 
+    
+    #Loop para inserir os dados(usuario e msisdn)
+    for _, row in planilhaDb.iterrows(): 
+        inserir_usuario(row["id_usuario"], row["usuario"]) 
+        inserir_linha(row["id_linha"], row["msisdn"]) 
+
+    #Pega estado atual do banco 
+    df_banco = carregar_relacoes() 
+
+    #compara banco com planilha
+    adicionados, removidos, alterados = comparar_dados(df_banco, df_novo) 
+
+    #Debug que mostra quantos registros mudaram
+    print("Adicionados:", len(adicionados)) 
+    print("Removidos:", len(removidos)) 
+    print("Alterados:", len(alterados)) 
+
+    #Sincroniza os dados no banco
+    sincronizar_banco(df_banco, df_novo) 
+
+#aaaaaaaaaa
 
 gerar_relatorio_excel(caminho_excel, planilhaFinal, valor_setor)
 

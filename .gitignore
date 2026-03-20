@@ -1,4 +1,20 @@
 *.xlsx
 *.xls
-__pycache__/
 .env
+# Executáveis
+*.exe
+
+# PyInstaller
+dist/
+build/
+*.spec
+
+# Python
+__pycache__/
+*.pyc
+
+# Banco (opcional)
+banco.db
+
+# Logs
+*.log

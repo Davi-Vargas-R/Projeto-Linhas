@@ -1,0 +1,220 @@
+Documento de Referência – Projeto de Sincronização de Dados (Usuários e Linhas)
+
+1. Contexto Geral
+
+Este projeto é uma ferramenta interna da empresa destinada a sincronizar
+dados entre planilhas Excel e um banco de dados SQLite.
+A ferramenta será utilizada ocasionalmente por múltiplos usuários e
+poderá futuramente ser automatizada para execução mensal.
+
+Tecnologias principais: - Python - SQLite - Pandas
+
+Volume de dados estimado: - Menos de 1000 registros - Crescimento lento
+
+Fonte de dados: - Duas planilhas Excel fixas (que são combinadas/merge
+durante o processamento)
+
+------------------------------------------------------------------------
+
+2. Estrutura do Banco de Dados
+
+O banco de dados possui quatro tabelas principais:
+
+2.1 Tabela: usuarios
+
+Armazena os dados dos usuários.
+
+Campos conceituais: - id_usuario (chave primária) - outros dados do
+usuário
+
+2.2 Tabela: linhas
+
+Armazena informações das linhas telefônicas.
+
+Campos conceituais: - id_linha (chave primária) - numero - operadora -
+outros atributos
+
+2.3 Tabela: usuarios_linhas (tabela pivô)
+
+Responsável por representar a relação N:N entre usuários e linhas.
+
+Cada registro representa um vínculo entre: (id_usuario, id_linha)
+
+Também pode armazenar dados adicionais da relação: - valor_linha -
+status - outros atributos relacionados
+
+A combinação: (id_usuario, id_linha) deve ser tratada como unidade
+lógica única.
+
+2.4 Tabela: auditoria
+
+Registra todas as alterações realizadas pelo sistema.
+
+Campos conceituais: - data - ação (INSERT / UPDATE / DELETE) -
+tabela_afetada - id_usuario - id_linha - valor_antigo - valor_novo -
+id_importacao
+
+------------------------------------------------------------------------
+
+3. Fonte de Dados (Planilhas)
+
+Os dados são extraídos de duas planilhas Excel fixas.
+
+Características importantes: - Os arquivos permanecem os mesmos - Apenas
+os dados internos são atualizados - As planilhas são combinadas através
+de merge antes do processamento
+
+A posição da linha na planilha NÃO deve ser utilizada como referência.
+
+Exemplo incorreto: linha 335 da planilha = registro específico
+
+Exemplo correto: registro identificado por: id_usuario + id_linha
+
+------------------------------------------------------------------------
+
+4. Processo Geral de Importação
+
+Fluxo conceitual do sistema:
+
+1.  Carregar planilhas Excel
+2.  Realizar merge das duas planilhas
+3.  Normalizar os dados
+4.  Validar estrutura da planilha
+5.  Comparar dados com o banco
+6.  Detectar alterações
+7.  Registrar auditoria
+8.  Aplicar alterações
+9.  Finalizar transação
+
+------------------------------------------------------------------------
+
+5. Validações Antes da Importação
+
+Antes de qualquer alteração no banco, o sistema deve verificar:
+
+-   presença das colunas esperadas
+-   tipos de dados válidos
+-   ausência de duplicatas
+-   consistência dos IDs
+
+Se alguma validação falhar: importação deve ser cancelada.
+
+------------------------------------------------------------------------
+
+6. Verificação de Relações (N:N)
+
+A relação entre usuários e linhas é muitos-para-muitos.
+
+A comparação deve ser feita considerando pares completos:
+
+(id_usuario, id_linha)
+
+Nunca analisar apenas: id_usuario ou id_linha
+
+A comparação deve identificar:
+
+Relações novas
+
+Existem na planilha mas não existem no banco.
+
+Relações removidas
+
+Existem no banco mas não existem na planilha.
+
+Relações mantidas
+
+Existem em ambos.
+
+------------------------------------------------------------------------
+
+7. Comparação de Dados
+
+Para relações existentes em ambos os conjuntos:
+
+Comparar campos adicionais como:
+
+-   valor_linha
+-   status
+-   outros atributos
+
+Se os dados forem iguais: nenhuma ação é realizada.
+
+Se houver diferença: registro deve ser atualizado.
+
+------------------------------------------------------------------------
+
+8. Tratamento de Novos Registros
+
+Se aparecerem IDs inexistentes no banco:
+
+Novo id_usuario: inserir na tabela usuarios.
+
+Novo id_linha: inserir na tabela linhas.
+
+------------------------------------------------------------------------
+
+9. Auditoria
+
+Todas as alterações devem ser registradas na tabela de auditoria.
+
+Exemplos de ações registradas:
+
+INSERT UPDATE DELETE
+
+Cada registro deve conter: - data da alteração - ação realizada -
+registro afetado - valor antigo - valor novo - id_importacao
+
+------------------------------------------------------------------------
+
+10. Controle de Importações
+
+Existe uma tabela simples para registrar execuções do sistema.
+
+Tabela: importacoes
+
+Campos conceituais: - id_importacao - data_importacao -
+registros_processados (opcional)
+
+Essa tabela permite rastrear: quando cada execução ocorreu.
+
+------------------------------------------------------------------------
+
+11. Uso de Transações
+
+Todas as alterações devem ocorrer dentro de uma transação.
+
+Fluxo conceitual:
+
+1.  BEGIN TRANSACTION
+2.  registrar auditoria
+3.  aplicar alterações
+4.  se tudo estiver correto → COMMIT
+5.  se ocorrer erro → ROLLBACK
+
+Isso garante consistência do banco.
+
+------------------------------------------------------------------------
+
+12. Regras Importantes
+
+1.  Nunca depender da posição da linha da planilha.
+2.  Sempre usar IDs como referência.
+3.  Tratar (id_usuario, id_linha) como unidade única.
+4.  Detectar duplicatas antes da importação.
+5.  Registrar todas as alterações na auditoria.
+6.  Aplicar mudanças apenas dentro de transações.
+
+------------------------------------------------------------------------
+
+13. Objetivo do Sistema
+
+Manter sincronização confiável entre:
+
+Planilhas Excel (fonte de dados) e Banco SQLite (armazenamento
+persistente)
+
+Garantindo:
+
+-   rastreabilidade
+-   integridade dos dados
+-   histórico de alterações
