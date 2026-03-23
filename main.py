@@ -5,13 +5,14 @@ from openpyxl.styles import PatternFill, Font, Border, Side, Alignment
 from Main.interface import escolher_planilha, escolher_onde_salvar
 from Main.processamento import mover_para_final, normalizar_msisdn 
 from Main.relatorio_excel import gerar_relatorio_excel
-from database.schema import criar_tabelas
-from database.repository import obter_ou_criar_usuario, obter_ou_criar_linha
-from database.repository import inserir_usuario, inserir_linha
+from database.esquema import criar_tabelas
+from database.repositorio import obter_ou_criar_usuario, obter_ou_criar_linha
+from database.repositorio import inserir_usuario, inserir_linha
 from database.queries import carregar_relacoes
 from database.sync import comparar_dados, sincronizar_banco
 from datetime import datetime
 import logging
+from Main.integracao_claro import obter_dados_claro_api
 
 logging.basicConfig(
     filename="execucao.log",
@@ -23,7 +24,7 @@ logging.info("Script iniciado")
 
 # Escolha das planilhas
 caminho_planilha1 = escolher_planilha("Selecione a planilha Funcionários-Linhas(Dados)")
-caminho_planilha2 = escolher_planilha("Selecione a planilha Base de dados Embratel(Linhas)")
+caminho_planilha2 = escolher_planilha("Planilha Claro")
 
 # Leitura das planilhas
 planilha1 = pd.read_excel(caminho_planilha1)
@@ -95,10 +96,28 @@ planilhaFinal = planilhaTemp[filtro_ocupado]
 planilhaFinal = mover_para_final(planilhaFinal, 'valor')
 linhas_livres = mover_para_final(linhas_livres, 'valor')
 
+planilhaTemp['setor'] = planilhaTemp['setor'].fillna("SEM SETOR")
+planilhaTemp["setor"] = planilhaTemp['setor'].astype(str).str.strip()
+planilhaTemp.loc[
+    planilhaTemp["setor"] == "",
+    'setor'
+] = "SEM SETOR"
+
+linhas_livres['setor'] = linhas_livres['setor'].fillna('SEM SETOR').astype(str).str.strip()
+planilhaFinal['setor'] = planilhaFinal['setor'].fillna('SEM SETOR').astype(str).str.strip()
+
+linhas_livres.loc[linhas_livres['setor'] == '', 'setor'] = 'SEM SETOR'
+planilhaFinal.loc[planilhaFinal['setor'] == '', 'setor'] = 'SEM SETOR'
+
 # Agrupamentos por setor
 valor_total = planilhaTemp.groupby('setor', dropna=False)['valor'].sum()
 valor_livre = linhas_livres.groupby('setor', dropna=False)['valor'].sum()
 valor_ocupado = planilhaFinal.groupby('setor', dropna=False)['valor'].sum()
+total_geral = valor_total.sum()
+porcetagem = (valor_total/ total_geral) * 100
+porcetagem = round(porcetagem, 2)
+quantidade = planilhaFinal.groupby('setor')['usuario'].nunique()
+
 
 # Tabela resumo
 valor_setor = pd.DataFrame({
@@ -106,7 +125,26 @@ valor_setor = pd.DataFrame({
     'valor linhas livres': valor_livre.reindex(valor_total.index, fill_value=0).values,
     'valor linhas ocupadas': valor_ocupado.reindex(valor_total.index, fill_value=0).values,
     'valor total': valor_total.values,
+    'porcentagem (%)': porcetagem.values,
+    'quantidade pessoas': quantidade.reindex(valor_total.index, fill_value=0).values
 })
+
+total_livres = valor_setor['valor linhas livres'].sum()
+total_ocupadas = valor_setor['valor linhas ocupadas'].sum()
+total_geral = valor_setor['valor total'].sum()
+
+total_pessoas = planilhaFinal['usuario'].nunique()
+
+linha_total = pd.DataFrame([{
+    'setor': 'TOTAL',
+    'valor linhas livres': total_livres,
+    'valor linhas ocupadas': total_ocupadas,
+    'valor total': total_geral,
+    'porcentagem (%)': 100.0,
+    'quantidade pessoas': total_pessoas
+}])
+
+valor_setor = pd.concat([valor_setor, linha_total], ignore_index=True)
 
 print(planilhaFinal)
 
@@ -198,6 +236,12 @@ planilhaFinal.to_csv(
     index=False,
     sep=";",
     encoding='utf-8-sig'
+)
+valor_setor.to_csv(
+    base + "_valores.csv",
+    index = False,
+    sep =";",
+    encoding="utf-8-sig"
 )
 
 linhas_livres.to_csv(

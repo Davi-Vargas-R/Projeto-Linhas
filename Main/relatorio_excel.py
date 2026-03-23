@@ -1,6 +1,7 @@
 import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Font, Border, Side, Alignment
+from openpyxl.chart import PieChart, Reference
 
 def gerar_relatorio_excel(caminho_excel, planilhaFinal, valor_setor):
 
@@ -11,6 +12,15 @@ def gerar_relatorio_excel(caminho_excel, planilhaFinal, valor_setor):
     # Estilização Excel
     wb = load_workbook(caminho_excel)
 
+    ws_valor = wb["Valor-Setor"]
+
+    ultima_linha = ws_valor.max_row
+
+    for col in range(1, ws_valor.max_column + 1):
+        cell = ws_valor.cell(row=ultima_linha, column=col)
+        cell.font = Font(bold=True)
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+            
     header_fill = PatternFill(start_color="006633", end_color="006633", fill_type="solid")
     linha_fill = PatternFill(start_color="E8F5E9", end_color="E8F5E9", fill_type="solid")
 
