@@ -2,10 +2,14 @@ import pandas as pd
 from tkinter import Tk, filedialog
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Font, Border, Side, Alignment
-from interface import escolher_planilha, escolher_onde_salvar
-from processamento import mover_para_final, normalizar_msisdn 
-from relatorio_excel import gerar_relatorio_excel
-from database import criar_tabelas, inserir_linha, inserir_usuario, carregar_relacoes, comparar_dados, sincronizar_banco, obter_ou_criar_linha, obter_ou_criar_usuario
+from Main.interface import escolher_planilha, escolher_onde_salvar
+from Main.processamento import mover_para_final, normalizar_msisdn 
+from Main.relatorio_excel import gerar_relatorio_excel
+from database.schema import criar_tabelas
+from database.repository import obter_ou_criar_usuario, obter_ou_criar_linha
+from database.repository import inserir_usuario, inserir_linha
+from database.queries import carregar_relacoes
+from database.sync import comparar_dados, sincronizar_banco
 from datetime import datetime
 import logging
 
