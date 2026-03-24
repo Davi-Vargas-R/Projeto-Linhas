@@ -18,3 +18,7 @@ banco.db
 
 # Logs
 *.log
+*.spec
+*.db
+*.postman/
+*postman/

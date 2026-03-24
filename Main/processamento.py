@@ -13,3 +13,15 @@ def normalizar_msisdn(col):
         .str.replace(r'^55', '', regex=True)
         .str.strip()
     )
+
+def normalizar_setor(df):
+    df['setor'] = (
+        df['setor']
+        .fillna("SEM SETOR")
+        .astype(str)
+        .str.strip()
+    )
+    
+    df.loc[df['setor']=="", 'setor']= "SEM SETOR"
+
+    return df
