@@ -14,7 +14,7 @@ __pycache__/
 *.pyc
 
 # Banco (opcional)
-banco.db
+linhas.db
 
 # Logs
 *.log
