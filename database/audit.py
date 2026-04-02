@@ -1,4 +1,5 @@
 from datetime import datetime
+
 #Função responsável pela lógica da auditoria
 def registrar_auditoria(cursor, acao, tabela, row, valor_antigo, valor_novo, id_importacao):
     data_atual = datetime.now().isoformat()

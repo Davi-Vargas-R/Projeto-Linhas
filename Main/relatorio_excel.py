@@ -2,12 +2,29 @@ import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Font, Border, Side, Alignment
 from openpyxl.chart import PieChart, Reference
+from database.repositorio import buscar_gastos_mensais
+
+
+MESES_PT = {
+    1: "Janeiro", 2:"Fevereiro", 3:"Março", 4:"Abril", 5:"Maio", 6:"Junho", 7:"Julho", 8:"Agosto", 9:"Setembro", 10:"Outubro", 11:"Novembro", 12:"Dezembro"
+}
 
 def gerar_relatorio_excel(caminho_excel, planilhaFinal, valor_setor):
 
-    with pd.ExcelWriter(caminho_excel) as writer:
-        planilhaFinal.to_excel(writer, sheet_name='Usuários Válidos', index=False)
-        valor_setor.to_excel(writer, sheet_name='Valor-Setor', index=False)
+    gastos = buscar_gastos_mensais()
+    df_gastos = pd.DataFrame(gastos, columns=["mes", "ano", "valor total", "registrado em"])
+
+    if not df_gastos.empty:
+        df_gastos["mes"] = df_gastos["mes"].map(lambda m: MESES_PT.get(str(m).zfill(2),m))
+
+        df_gastos["registrado em"] = pd.to_datetime(df_gastos["registrado em"]).dt.strftime("%d/%m/%Y %H:%M")
+
+        with pd.ExcelWriter(caminho_excel) as writer:
+            planilhaFinal.to_excel(writer, sheet_name="Usuários Válidos", index=False)
+
+            valor_setor.to_excel(writer, sheet_name="Valor-Setor", index= False)
+            df_gastos.to_excel(writer, sheet_name="Histórico Mensal", index=False)
+
 
     # Estilização Excel
     wb = load_workbook(caminho_excel)

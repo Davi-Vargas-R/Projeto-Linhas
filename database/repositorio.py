@@ -67,3 +67,60 @@ def obter_ou_criar_linha(msisdn):
     novo_id = cursor.lastrowid
     conn.close()
     return novo_id
+
+def registrar_gasto_mensal(mes,ano, valor_total):
+    #Insere ou atualiza o gasto do mês e ano informado. Retornando 'inserido' ou 'atualizado' ou 'ignorado'
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, valor_total FROM gastos_mensais WHERE mes = ? AND ano = ?
+                   """,(mes,ano))
+    existente= cursor.fetchone()
+
+    if existente:
+        if existente[1] == valor_total:
+            conn.close()
+            return "ignorado"
+        cursor.execute("""
+            UPDATE gastos_mensais SET valor_total = ?, registrado_em = datetime('now', 'localtime')
+                WHERE mes = ? AND ano = ?
+                       """, (valor_total, mes, ano))
+        conn.commit()
+        conn.close()
+        return "atualizado"
+    
+    cursor.execute("""
+        INSERT INTO gastos_mensais (mes, ano, valor_total)
+        VALUES(?, ?, ?)
+    """, (mes, ano, valor_total))
+    conn.commit()
+    conn.close()
+    return "inserido"
+    
+def buscar_gastos_mensais():
+    #Retorna todos os gastos mensais ordenados por mes
+    conn =conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT mes, ano, valor_total, registrado_em
+        FROM gastos_mensais
+        ORDER BY ano ASC, mes ASC
+                   """)
+    resultados = cursor.fetchall()
+    conn.close()
+    return resultados
+
+
+def gasto_mes_registrado(mes, ano):
+    #Verifica se ja existe registro no mês e ano selecionado
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT valor_total FROM gastos_mensais WHERE mes = ? AND ano = ?
+    """, (mes, ano))
+    resultado = cursor.fetchone()
+    conn.close()
+    return resultado[0] if resultado else None

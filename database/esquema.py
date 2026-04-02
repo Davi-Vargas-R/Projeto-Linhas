@@ -63,5 +63,18 @@ def criar_tabelas():
     )
     """)
 
+
+    # Tabela de gastos mensais
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS gastos_mensais (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        mes TEXT NOT NULL,
+        ano INTEGER NOT NULL,
+        valor_total REAL NOT NULL,
+        registrado_em TEXT DEFAULT (datetime('now', 'localtime')),
+        UNIQUE(mes, ano)
+    )
+    """)
+
     conn.commit()
     conn.close()

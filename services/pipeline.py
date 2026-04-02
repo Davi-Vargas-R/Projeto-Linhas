@@ -1,5 +1,5 @@
 import pandas as pd
-from Main.interface import escolher_planilha, escolher_onde_salvar
+from Main.interface import escolher_planilha, escolher_onde_salvar, gasto_mensal_interface
 from Main.processamento import mover_para_final, normalizar_msisdn, normalizar_setor
 from Main.relatorio_excel import gerar_relatorio_excel
 from database.esquema import criar_tabelas
@@ -129,7 +129,9 @@ def executar_pipeline():
 
     valor_setor = pd.concat([valor_setor, linha_total], ignore_index=True)
 
+
     print(planilhaFinal)
+
 
     # Salvar arquivo
     caminho_excel = escolher_onde_salvar(
@@ -210,6 +212,8 @@ def executar_pipeline():
 
     #aaaaaaaaaa
 
+    gasto_mensal_interface(total_geral)
+    
     gerar_relatorio_excel(caminho_excel, planilhaFinal, valor_setor)
 
     # Exportar CSV
